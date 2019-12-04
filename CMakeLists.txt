@@ -19,4 +19,4 @@ add_library(rosy STATIC
         boot.cpp
         module.h
         property.h
-        rosy.h)
+        rosy.h modules/audio/audio.cpp modules/audio/audio.h)
