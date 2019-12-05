@@ -6,6 +6,8 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
+#include <map>
+
 namespace rosy::graphics {
     enum class Uniform : GLint {};
     enum class Attrib : GLint {};
@@ -20,6 +22,9 @@ namespace rosy::graphics {
     struct ShaderProgram {
         GLuint program;
 
+        std::map<std::string, Uniform> uniforms{};
+//        std::map<std::string, Attrib> attributes{};
+
         inline Uniform getUniformLocation(const std::string_view name) noexcept {
             return Uniform(glGetUniformLocation(program, name.data()));
         }
@@ -33,19 +38,27 @@ namespace rosy::graphics {
         }
 
         inline void setInt(const Uniform location, const GLint x, const GLint y) noexcept {
-            glProgramUniform2i(program, GLint(location), x, y);
+            if (location != Uniform(-1)) {
+                glProgramUniform2i(program, GLint(location), x, y);
+            }
         }
 
         inline void setFloat(const Uniform location, const GLfloat x) noexcept {
-            glProgramUniform1f(program, GLint(location), x);
+            if (location != Uniform(-1)) {
+                glProgramUniform1f(program, GLint(location), x);
+            }
         }
 
         inline void set(const Uniform location, const glm::vec3 xyz) noexcept {
-            glProgramUniform3f(program, GLint(location), xyz.x, xyz.y, xyz.z);
+            if (location != Uniform(-1)) {
+                glProgramUniform3f(program, GLint(location), xyz.x, xyz.y, xyz.z);
+            }
         }
 
         inline void set(const Uniform location, const glm::mat4 m) noexcept {
-            glProgramUniformMatrix4fv(program, GLint(location), 1, false, (float *) &m);
+            if (location != Uniform(-1)) {
+                glProgramUniformMatrix4fv(program, GLint(location), 1, false, (float *) &m);
+            }
         }
 
         void setInt(const std::string_view name, const GLint x, const GLint y) noexcept {
