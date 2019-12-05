@@ -3,20 +3,24 @@ project(rosy)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(.)
-include_directories(modules)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glslang)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/modules)
 
 add_library(rosy STATIC
-        modules/event/event.h
-        modules/graphics/graphics.cpp
-        modules/graphics/graphics.h
-        modules/graphics/shader.h
-        modules/input/input.h
-        modules/timer/timer.cpp
-        modules/timer/timer.h
-        modules/window/window.cpp
-        modules/window/window.h
-        boot.cpp
-        module.h
-        property.h
-        rosy.h modules/audio/audio.cpp modules/audio/audio.h)
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/event/event.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/graphics.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/graphics.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/shader.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/input/input.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/timer/timer.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/timer/timer.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/window/window.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/window/window.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/audio/audio.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/audio/audio.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/boot.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/module.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/property.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/rosy.h)
