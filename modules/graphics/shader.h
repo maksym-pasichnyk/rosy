@@ -43,6 +43,12 @@ namespace rosy::graphics {
             }
         }
 
+        inline void setInt(const Uniform location, const GLint x) noexcept {
+            if (location != Uniform(-1)) {
+                glProgramUniform1i(program, GLint(location), x);
+            }
+        }
+
         inline void setFloat(const Uniform location, const GLfloat x) noexcept {
             if (location != Uniform(-1)) {
                 glProgramUniform1f(program, GLint(location), x);
@@ -59,6 +65,10 @@ namespace rosy::graphics {
             if (location != Uniform(-1)) {
                 glProgramUniformMatrix4fv(program, GLint(location), 1, false, (float *) &m);
             }
+        }
+
+        void setInt(const std::string_view name, const GLint x) noexcept {
+            setInt(getUniformLocation(name), x);
         }
 
         void setInt(const std::string_view name, const GLint x, const GLint y) noexcept {
