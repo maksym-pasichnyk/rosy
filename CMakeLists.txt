@@ -1,16 +1,24 @@
 cmake_minimum_required(VERSION 3.15)
 project(rosy)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(LIBTYPE STATIC)
+set(HAVE_LIBC TRUE)
+
+execute_process(COMMAND python gl3w_gen.py --root "${PROJECT_BINARY_DIR}/ThirdParty/gl3w" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/gl3w")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glslang)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/fmt)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/glm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/SDL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/gl3w)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/openal-soft)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/modules)
+target_compile_options(fmt PUBLIC /EHsc)
 
-add_executable(rc rc.cpp)
+add_executable(rosy-rc src/rc.cpp)
 
-function(add_resources project directory)
+function(rosy_add_resources project)
     list(REMOVE_DUPLICATES ARGN)
     set(output_directory "${CMAKE_CURRENT_SOURCE_DIR}/.generated")
 
@@ -21,40 +29,66 @@ function(add_resources project directory)
         set(output "${output_directory}/${input_identifier}.o")
 
         add_custom_command(OUTPUT ${output}
-                COMMAND ld -r -b binary -o ${output} ${source}
-                DEPENDS ${input}
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                COMMENT "Building resource object ${output}"
-                VERBATIM)
+            COMMAND ld -r -b binary -o ${output} ${source}
+            DEPENDS ${input}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Building resource object ${output}"
+            VERBATIM
+        )
         list(APPEND result ${output})
     endforeach()
 
     add_custom_command(
-            OUTPUT "${output_directory}/R.cpp" "${output_directory}/R.h"
-            COMMAND rc ${output_directory} ${directory} ${ARGN}
-            DEPENDS rc ${ARGN}
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT "${output_directory}/R.cpp" "${output_directory}/R.h"
+        COMMAND rosy-rc ${output_directory} ${directory} ${ARGN}
+        DEPENDS rosy-rc ${ARGN}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     )
     add_library("${project}.rc" STATIC "${output_directory}/R.cpp" "${output_directory}/R.h" ${result})
-    target_link_libraries(${project} "${project}.rc")
+    target_link_libraries(${project} PUBLIC "${project}.rc")
 endfunction()
 
 add_library(rosy STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/event/event.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/graphics.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/graphics.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/graphics/shader.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/input/input.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/timer/timer.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/timer/timer.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/window/window.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/window/window.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/audio/audio.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/audio/audio.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/resources/resources.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/resources/resources.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/boot.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/module.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/property.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/rosy.h)
+    src/modules/event/event.h
+    src/modules/graphics/graphics.cpp
+    src/modules/graphics/graphics.h
+    src/modules/graphics/shader.h
+    src/modules/input/input.h
+    src/modules/timer/timer.cpp
+    src/modules/timer/timer.h
+    src/modules/window/window.cpp
+    src/modules/window/window.h
+    src/modules/audio/audio.cpp
+    src/modules/audio/audio.h
+    src/modules/resources/resources.cpp
+    src/modules/resources/resources.h
+    src/boot.cpp
+    src/module.h
+    src/property.h
+    src/rosy.h
+)
 
+target_compile_definitions(rosy PUBLIC
+    -DGLFW_INCLUDE_NONE
+    -DIMGUI_DEFINE_MATH_OPERATORS
+    -DGLM_FORCE_XYZW_ONLY
+    -DNOMINMAX
+    -DSDL_MAIN_HANDLED
+)
+
+target_link_libraries(rosy PUBLIC
+    glm
+    fmt
+    SDL2-static
+    gl3w
+    OpenAL
+)
+
+target_include_directories(rosy PUBLIC src)
+target_include_directories(rosy PUBLIC
+    ThirdParty/SDL/include
+    ThirdParty/gl3w
+)
+
+add_executable(example examples/main.cpp examples/transform.h examples/camera.h examples/camera.cpp)
+target_link_libraries(example PRIVATE rosy)
