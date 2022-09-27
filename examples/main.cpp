@@ -1,14 +1,84 @@
-#include <rosy.h>
-#include <modules/audio/audio.h>
-#include <modules/window/window.h>
-#include <modules/graphics/shader.h>
-#include <modules/graphics/graphics.h>
+#include <rosy.hpp>
+#include "modules/audio/audio.hpp"
+#include "modules/window/window.hpp"
+#include <modules/graphics/shader.hpp>
+#include "modules/graphics/graphics.hpp"
 
 #include <array>
 #include <fstream>
+#include <sstream>
 #include <filesystem>
 
 #include "camera.h"
+#include "fmt/core.h"
+
+struct VertexAttrib {
+    uint32_t binding;
+    int32_t size;
+    GLenum type;
+    bool normalized;
+    uint64_t offset;
+};
+
+struct Mesh {
+    static auto create() {
+        auto out = std::make_shared<Mesh>();
+
+        glGenVertexArrays(1, &out->vao);
+        glGenBuffers(1, &out->vbo);
+        glGenBuffers(1, &out->ibo);
+
+        glBindVertexArray(out->vao);
+        glBindBuffer(GL_ARRAY_BUFFER, out->vbo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out->ibo);
+        glBindVertexArray(0);
+
+        return out;
+    }
+
+    void set_layout(std::span<const VertexAttrib> attribs, uint64_t stride) {
+        vertex_stride = stride;
+
+        glBindVertexArray(vao);
+        for (auto& attrib : attribs) {
+            glEnableVertexAttribArray(attrib.binding);
+            glVertexAttribPointer(attrib.binding, attrib.size, attrib.type, attrib.normalized, int32_t(stride), (void*) attrib.offset);
+        }
+        glBindVertexArray(0);
+    }
+
+    void set_indices(const void* data, size_t count, size_t stride) {
+        index_count = count;
+        index_stride = stride;
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, uint32_t(index_count * index_stride), data, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    }
+
+    void set_vertices(const void* data, size_t count) {
+        vertex_count = count;
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, uint32_t(vertex_count * vertex_stride), data, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    GLuint get_native_handle() {
+        return vao;
+    }
+
+private:
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ibo = 0;
+
+    size_t vertex_stride = 0;
+    size_t vertex_count = 0;
+
+    size_t index_count = 0;
+    size_t index_stride = 0;
+};
 
 namespace {
     constexpr auto HALF_FOV_60_TAN = 0.577350269f;
@@ -23,14 +93,15 @@ namespace {
         float x, y, u, v;
     };
 
+    std::shared_ptr<Mesh> mesh;
     std::shared_ptr<Shader> vertex;
     std::shared_ptr<Shader> fragment;
     rosy::timer::point start_time;
 
-    GLuint pipeline, vbo, ibo, vao;
+    GLuint pipeline;
 
     Camera camera{};
-    VertexData* buffer;
+//    VertexData* buffer;
 
     constexpr auto indices = std::array { 0, 1, 3, 1, 2, 3 };
     constexpr auto vertices = std::array{
@@ -65,59 +136,69 @@ void rosy::load() {
     sound->set_loop(true);
     sound->play();
 
-    auto core_glsl = read_file("../examples/core.glsl").value();
-    auto main_glsl = read_file("../examples/fractal.glsl").value();
+    auto parse = [](const std::string& filename) {
+        std::string input = read_file(filename).value();
+
+        while (true) {
+            size_t include_char_index = input.find("#include", 0);
+            if (include_char_index == std::string::npos) {
+                return input;
+            }
+
+            size_t first_quote_index = input.find('"', include_char_index);
+            if (first_quote_index == std::string::npos) {
+                fmt::print("Expected filename\n");
+                exit(1);
+            }
+            size_t second_quote_index = input.find('"', first_quote_index + 1);
+            if (second_quote_index == std::string::npos) {
+                fmt::print("Expected filename\n");
+                exit(1);
+            }
+
+            std::string file_name = input.substr(first_quote_index + 1, second_quote_index - first_quote_index - 1);
+            fmt::print("include '{}'\n", file_name);
+
+            std::string tmp;
+            tmp.append(input.substr(0, include_char_index));
+            tmp.append(read_file(file_name).value());
+            tmp.append(input.substr(second_quote_index + 1));
+
+            std::swap(input, tmp);
+        }
+    };
+
+    auto main_glsl = parse("../examples/fractal.glsl");
 
     vertex = rosy::graphics::new_shader(ShaderType::Vertex, {
-        R"(
-            #version 400
-            #define VERTEX_SHADER
-        )",
-        core_glsl.c_str(),
-        "\n",
+        "#version 400\n",
+        "#define VERTEX_SHADER\n",
         main_glsl.c_str()
     });
 
     fragment = rosy::graphics::new_shader(ShaderType::Fragment, {
-        R"(
-            #version 400
-            #define FRAGMENT_SHADER
-        )",
-        core_glsl.c_str(),
-        "\n",
+        "#version 400\n",
+        "#define FRAGMENT_SHADER\n",
         main_glsl.c_str()
     });
 
-    glCreateProgramPipelines(1, &pipeline);
+    glGenProgramPipelines(1, &pipeline);
     glUseProgramStages(pipeline, GL_VERTEX_SHADER_BIT, vertex->program);
     glUseProgramStages(pipeline, GL_FRAGMENT_SHADER_BIT, fragment->program);
     glBindProgramPipeline(pipeline);
 
-    const auto position = vertex->get_attrib_location("in_data.position").value();
-    const auto uv = vertex->get_attrib_location("in_data.uv").value();
+    const auto position = vertex->get_attrib_location("in_position").value();
+    const auto uv = vertex->get_attrib_location("in_uv").value();
 
-    glCreateBuffers(1, &vbo);
-    glNamedBufferStorage(vbo, sizeof(VertexData) * 4, nullptr, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+    mesh = Mesh::create();
 
-    glCreateBuffers(1, &ibo);
-    glNamedBufferData(ibo, sizeof(indices), indices.data(), GL_STATIC_DRAW);
+    mesh->set_layout(std::array{
+        VertexAttrib{uint32_t(position.id), 2, GL_FLOAT, false, offsetof(VertexData, x)},
+        VertexAttrib{uint32_t(uv.id),       2, GL_FLOAT, false, offsetof(VertexData, u)}
+    }, sizeof(VertexData));
 
-    glCreateVertexArrays(1, &vao);
-    glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(VertexData));
-    glVertexArrayElementBuffer(vao, ibo);
-
-    glEnableVertexArrayAttrib(vao, position.id);
-    glEnableVertexArrayAttrib(vao, uv.id);
-
-    glVertexArrayAttribFormat(vao, position.id, 2, GL_FLOAT, GL_FALSE, offsetof(VertexData, x));
-    glVertexArrayAttribFormat(vao, uv.id, 2, GL_FLOAT, GL_FALSE, offsetof(VertexData, u));
-
-    glVertexArrayAttribBinding(vao, position.id, 0);
-    glVertexArrayAttribBinding(vao, uv.id, 0);
-
-    buffer = reinterpret_cast<VertexData*>(glMapNamedBufferRange(vbo, 0, sizeof(VertexData) * 4, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
-
-    std::memcpy(buffer, vertices.data(), sizeof(vertices));
+    mesh->set_vertices(vertices.data(), vertices.size());
+    mesh->set_indices(indices.data(), indices.size(), sizeof(uint32_t));
 
     camera.transform.set_position(glm::vec3{0, 0, 3});
 
@@ -137,11 +218,10 @@ void rosy::load() {
 }
 
 void rosy::unload() {
-    glUnmapNamedBuffer(vbo);
 }
 
 void rosy::draw() {
-    glBindVertexArray(vao);
+    glBindVertexArray(mesh->get_native_handle());
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 }
@@ -177,6 +257,13 @@ void rosy::resize(int width, int height) {
     const auto y_scale = 1.0f / static_cast<float>(height);
     const auto aspect = static_cast<float>(width) * y_scale;
 
+    auto buffer = std::array{
+        VertexData{-1.0f, -1.0f, 0, 0},
+        VertexData{ 1.0f, -1.0f, 1, 0},
+        VertexData{ 1.0f,  1.0f, 1, 1},
+        VertexData{-1.0f,  1.0f, 0, 1}
+    };
+
     buffer[0].u = -aspect * HALF_FOV_60_TAN + y_scale;
     buffer[0].v = -HALF_FOV_60_TAN + y_scale;
 
@@ -188,6 +275,8 @@ void rosy::resize(int width, int height) {
 
     buffer[3].u = -aspect * HALF_FOV_60_TAN + y_scale;
     buffer[3].v = HALF_FOV_60_TAN + y_scale;
+
+    mesh->set_vertices(buffer.data(), buffer.size());
 
     fragment->set_int2("_Resolution", glm::ivec2{width, height});
     vertex->set_int2("_Resolution", glm::ivec2{width, height});

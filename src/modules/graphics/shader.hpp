@@ -4,7 +4,7 @@
 #include <string>
 #include <optional>
 
-#include <GL/gl3w.h>
+#include <GL/glew.h>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -23,13 +23,22 @@ namespace rosy::graphics {
     struct Shader {
         GLuint program;
 
-        std::map<std::string, Uniform> uniforms{};
-        std::map<std::string, Attrib> attributes{};
+        explicit Shader(GLuint program) : program(program) {}
+        ~Shader() {
+            glDeleteProgram(program);
+        }
+
+//        std::map<std::string, Uniform> uniforms{};
+//        std::map<std::string, Attrib> attributes{};
 
         auto get_uniform_location(const std::string& name) noexcept -> std::optional<Uniform> {
-            if (auto it = uniforms.find(name); it != uniforms.end()) {
-                return it->second;
+            const auto id = glGetUniformLocation(program, name.c_str());
+            if (id != -1) {
+                return Uniform{id};
             }
+//            if (auto it = uniforms.find(name); it != uniforms.end()) {
+//                return it->second;
+//            }
             return std::nullopt;
         }
 

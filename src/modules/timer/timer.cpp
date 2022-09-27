@@ -1,11 +1,20 @@
-#include "timer.h"
+#include "timer.hpp"
 
 #include <thread>
-#include <module.h>
 
 namespace rosy::timer {
     namespace {
-        module<Timer> instance;
+        Arc<Timer> s_timer;
+    }
+
+    void Timer::init() {
+        s_timer = Arc<Timer>::alloc();
+    }
+    auto Timer::get() -> Arc<Timer> const& {
+        if (!s_timer) {
+            throw std::runtime_error("Timer module is not initialized");
+        }
+        return s_timer;
     }
 
     void sleep(const std::chrono::milliseconds& delay) {
@@ -13,12 +22,12 @@ namespace rosy::timer {
     }
 
     auto get_time() -> point {
-        return instance->get_time();
+        return Timer::get()->get_time();
     }
     auto get_fps() -> size_t {
-        return instance->get_fps();
+        return Timer::get()->get_fps();
     }
     auto get_delta() -> double {
-        return instance->get_delta();
+        return Timer::get()->get_delta();
     }
 }

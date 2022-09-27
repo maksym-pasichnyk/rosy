@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <modules/timer/timer.h>
+#include "modules/timer/timer.hpp"
 
 namespace rosy {
     struct Config {

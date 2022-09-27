@@ -5,8 +5,8 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <property.h>
-#include <modules/timer/timer.h>
+#include <property.hpp>
+#include "modules/timer/timer.hpp"
 
 #include "transform.h"
 

@@ -2,12 +2,17 @@
 
 #include <chrono>
 
+#include "Arc.hpp"
+
 namespace rosy::timer {
     using clock = std::chrono::high_resolution_clock;
     using point = clock::time_point;
     using duration = std::chrono::duration<long, std::nano>;
 
     struct Timer {
+        static void init();
+        static auto get() -> Arc<Timer> const&;
+
         void reset() {
             m_step = duration(0);
             m_time = clock::now();

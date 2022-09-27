@@ -1,4 +1,6 @@
-#pragma once
+#extension GL_ARB_shading_language_include : require
+
+#include "../examples/core.glsl"
 
 #define MAX_STEPS 1000
 #define MAX_DIST 1000.0f
@@ -8,29 +10,33 @@ uniform float fractal_power = 10;
 uniform float darkness = 40;
 uniform vec3 fractal_color = vec3(1, 0, 1);
 
-struct appdata {
-    vec2 position;
-    vec2 uv;
-};
-
 struct v2f {
     vec2 uv;
 };
 
-in appdata in_data;
+#ifdef VERTEX_SHADER
+in vec2 in_position;
+in vec2 in_uv;
+
 out v2f o;
+
+out gl_PerVertex {
+    vec4 gl_Position;
+};
+
+void main() {
+    o.uv = in_uv;
+    gl_Position = vec4(in_position, 0.0, 1.0);
+}
+#else
 in v2f i;
 
-#ifdef VERTEX_SHADER
-    void main() {
-        o.uv = in_data.uv;
-        gl_Position = vec4(in_data.position, 0.0, 1.0);
-    }
-#else
-    vec4 render(in vec2 uv);
-    void main() {
-        gl_FragColor = render(i.uv);
-    }
+out vec4 out_color;
+
+vec4 render(in vec2 uv);
+void main() {
+    out_color = render(i.uv);
+}
 #endif
 
 vec2 scene(vec3 p) {

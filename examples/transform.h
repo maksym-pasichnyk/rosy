@@ -7,7 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <property.h>
+#include <property.hpp>
 
 struct Transform {
 public:

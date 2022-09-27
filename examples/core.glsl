@@ -1,6 +1,3 @@
-#pragma once
-//#extension GL_ARB_shading_language_include : require
-
 uniform ivec2 _Resolution;
 uniform float _Time;
 uniform float _DeltaTime;

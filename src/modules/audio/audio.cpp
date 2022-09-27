@@ -1,6 +1,6 @@
 #include <memory>
-#include <module.h>
-#include <modules/audio/audio.h>
+
+#include "audio.hpp"
 
 #include <array>
 #include <vector>
@@ -24,11 +24,11 @@ struct WAVFormat {
 };
 #pragma pack(pop)
 
-namespace {
-    module<rosy::audio::Audio> instance;
-}
-
 namespace rosy::audio {
+    namespace {
+        Arc<Audio> s_audio;
+    }
+
     Audio::Audio() {
         device = alcOpenDevice("OpenAL Soft");
         context = alcCreateContext(device, nullptr);
@@ -106,12 +106,23 @@ namespace rosy::audio {
         alSourcei(source, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
     }
 
+    void Audio::init() {
+        s_audio = Arc<Audio>::alloc();
+    }
+
+    auto Audio::get() -> Arc<Audio> const& {
+        if (!s_audio) {
+            throw std::runtime_error("Audio module is not initialized");
+        }
+        return s_audio;
+    }
+
     auto Audio::new_source(const std::filesystem::path& path, SourceType type) -> std::shared_ptr<Source> {
         auto data = Audio::load_data(path);
         return std::make_shared<Source>(*data);
     }
 
     auto new_source(const std::filesystem::path& path, SourceType type) -> std::shared_ptr<Source> {
-        return instance->new_source(path, type);
+        return Audio::get()->new_source(path, type);
     }
 }

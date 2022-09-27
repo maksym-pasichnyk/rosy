@@ -2,19 +2,20 @@ cmake_minimum_required(VERSION 3.15)
 project(rosy)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 23)
 set(LIBTYPE STATIC)
 set(HAVE_LIBC TRUE)
 
-execute_process(COMMAND python gl3w_gen.py --root "${PROJECT_BINARY_DIR}/ThirdParty/gl3w" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/gl3w")
+find_package(GLEW REQUIRED)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glslang)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/fmt)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/glm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/SDL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/gl3w)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/glfw)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/openal-soft)
 
-target_compile_options(fmt PUBLIC /EHsc)
+#target_compile_options(fmt PUBLIC /EHsc)
 
 add_executable(rosy-rc src/rc.cpp)
 
@@ -49,23 +50,25 @@ function(rosy_add_resources project)
 endfunction()
 
 add_library(rosy STATIC
-    src/modules/event/event.h
+    src/modules/event/event.hpp
     src/modules/graphics/graphics.cpp
-    src/modules/graphics/graphics.h
-    src/modules/graphics/shader.h
-    src/modules/input/input.h
+    src/modules/graphics/graphics.hpp
+    src/modules/graphics/shader.hpp
+    src/modules/input/input.hpp
     src/modules/timer/timer.cpp
-    src/modules/timer/timer.h
+    src/modules/timer/timer.hpp
     src/modules/window/window.cpp
-    src/modules/window/window.h
+    src/modules/window/window.hpp
     src/modules/audio/audio.cpp
-    src/modules/audio/audio.h
+    src/modules/audio/audio.hpp
     src/modules/resources/resources.cpp
-    src/modules/resources/resources.h
+    src/modules/resources/resources.hpp
     src/boot.cpp
-    src/module.h
-    src/property.h
-    src/rosy.h
+    src/property.hpp
+    src/rosy.hpp
+    src/Arc.hpp
+    src/Box.hpp
+    src/modules/input/input.cpp
 )
 
 target_compile_definitions(rosy PUBLIC
@@ -79,16 +82,14 @@ target_compile_definitions(rosy PUBLIC
 target_link_libraries(rosy PUBLIC
     glm
     fmt
-    SDL2-static
-    gl3w
+    glfw
+    GLEW::glew
     OpenAL
+    glslang
+    SDL2-static
 )
 
 target_include_directories(rosy PUBLIC src)
-target_include_directories(rosy PUBLIC
-    ThirdParty/SDL/include
-    ThirdParty/gl3w
-)
 
 add_executable(example examples/main.cpp examples/transform.h examples/camera.h examples/camera.cpp)
 target_link_libraries(example PRIVATE rosy)

@@ -7,6 +7,8 @@
 #include <AL/alc.h>
 #include <filesystem>
 
+#include "Arc.hpp"
+
 namespace rosy::audio {
     enum class Channel {
         Mono = 1,
@@ -69,6 +71,10 @@ namespace rosy::audio {
     struct Audio {
         friend struct Source;
 
+        static void init();
+        static auto get() -> Arc<Audio> const&;
+
+    public:
         Audio();
         ~Audio();
 

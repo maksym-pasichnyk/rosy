@@ -13,9 +13,9 @@
 [submodule "ThirdParty/glfw"]
 	path = ThirdParty/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "ThirdParty/SDL"]
-	path = ThirdParty/SDL
-	url = https://github.com/libsdl-org/SDL.git
 [submodule "ThirdParty/openal-soft"]
 	path = ThirdParty/openal-soft
 	url = https://github.com/kcat/openal-soft.git
+[submodule "ThirdParty/glew"]
+	path = ThirdParty/glew
+	url = https://github.com/nigels-com/glew.git

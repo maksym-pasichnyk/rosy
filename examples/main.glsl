@@ -1,32 +1,31 @@
-#pragma once
-
 #define MAX_STEPS 100
 #define MAX_DIST 1000.0f
 #define SURFACE_DIST 1e-3f
 
-struct appdata {
-    vec2 position;
-    vec2 uv;
-};
+#include "core.glsl"
 
 struct v2f {
     vec2 uv;
 };
 
-in appdata in_data;
+#ifdef VERTEX_SHADER
+in vec2 in_position;
+in vec2 in_uv;
 out v2f o;
+
+void main() {
+    o.uv = in_uv;
+    gl_Position = vec4(in_position, 0.0, 1.0);
+}
+#else
 in v2f i;
 
-#ifdef VERTEX_SHADER
-    void main() {
-        o.uv = in_data.uv;
-        gl_Position = vec4(in_data.position, 0.0, 1.0);
-    }
-#else
-    vec4 getColor(vec2 i);
-    void main() {
-        gl_FragColor = getColor(i.uv);
-    }
+out vec4 out_color;
+
+vec4 getColor(vec2 i);
+void main() {
+    out_color = getColor(i.uv);
+}
 #endif
 
 struct Ray {
